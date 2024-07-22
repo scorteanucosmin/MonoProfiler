@@ -15,3 +15,7 @@ Start the Profiler.exe application, in Assemblies tab choose game server's root 
 ![ProfilerMainPage](https://github.com/user-attachments/assets/483c2df4-a740-45e1-b9a3-8156700c309c)
 ![ProfilerAssemblies](https://github.com/user-attachments/assets/4f9899e9-24aa-4a4b-b8d1-6ee7a3c85404)
 
+# Credits
+https://github.com/mono/mono
+https://github.com/CarbonCommunity/Carbon.Native
+
