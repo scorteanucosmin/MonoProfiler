@@ -1,0 +1,16 @@
+﻿@page "/samples"
+@using Profiler.Common
+@using Profiler.Interfaces
+@using Profiler.Models
+
+@inject ILocalStorageHelper LocalStorageHelper
+
+@code 
+{
+    private LocalStorageModel? _localStorage;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _localStorage = LocalStorageHelper.Load<LocalStorageModel>(Constants.LocalStoragePath);
+    }
+}

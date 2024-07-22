@@ -1,0 +1,108 @@
+﻿@page "/assemblies"
+
+@using CommunityToolkit.Maui.Storage
+@using Profiler.Common
+@using Profiler.Interfaces
+@using Profiler.Models
+
+@inject ILocalStorageHelper LocalStorageHelper
+@inject IJSRuntime JsRuntime
+
+<MudDataGrid Items="@_foundAssemblies" Filterable="false" SortMode="@SortMode.None" QuickFilter="@AssemblyFilter" Hover="true">
+    <ToolBarContent >
+        <MudText Typo="Typo.h6">Assemblies</MudText>
+        <MudSpacer/>
+        <MudTextField @bind-Value="_assemblySearch" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+        </MudTextField>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x"/>
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudStack Row>
+                    @{
+                        if (!_localStorage.RegisteredAssemblies.Contains(context.Item))
+                        {
+                            <MudButton Size="@Size.Small" Variant="@Variant.Filled" Color="Color.Info" OnClick="@(() => RegisterAssembly(context))">Register</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Error" OnClick="@(() => RemoveAssembly(context))">Remove</MudButton>
+                        }
+                    }
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code
+{
+    private LocalStorageModel? _localStorage;
+    private readonly List<string> _foundAssemblies = new();
+    private string? _assemblySearch;
+    
+    private Func<string, bool> AssemblyFilter => x => 
+        string.IsNullOrWhiteSpace(_assemblySearch) || x.Contains(_assemblySearch, StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _localStorage = LocalStorageHelper.Load<LocalStorageModel>(Constants.LocalStoragePath);
+        string rootPath = _localStorage.RootPath;
+        if (string.IsNullOrEmpty(rootPath))
+        {
+            rootPath = await SelectFolderAsync();
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                return;
+            }
+
+            _localStorage.RootPath = rootPath;
+            LocalStorageHelper.Save(_localStorage, Constants.LocalStoragePath);
+        }
+        
+        //TODO: cache files once loaded & allow user to refresh
+        string harmonyPath = Path.Combine(rootPath, "HarmonyMods");
+        string assembliesPath = Path.Combine(rootPath, "RustDedicated_Data\\Managed");
+        //TODO: users can have oxide dir in different paths
+        string pluginsPath = Path.Combine(rootPath, "oxide\\plugins");
+        
+        //TODO: optimize files enumerating
+        IEnumerable<FileInfo> harmonyFiles = new DirectoryInfo(harmonyPath).EnumerateFiles("*.dll", SearchOption.AllDirectories);
+        foreach (FileInfo fileInfo in harmonyFiles)
+        {
+            _foundAssemblies.Add(Path.GetFileNameWithoutExtension(fileInfo.Name));
+        }
+        
+        IEnumerable<FileInfo> assemblyFiles = new DirectoryInfo(assembliesPath).EnumerateFiles("*.dll", SearchOption.AllDirectories);
+        foreach (FileInfo fileInfo in assemblyFiles)
+        {
+            _foundAssemblies.Add(Path.GetFileNameWithoutExtension(fileInfo.Name));
+        }
+        
+        IEnumerable<FileInfo> pluginFiles = new DirectoryInfo(pluginsPath).EnumerateFiles("*.cs", SearchOption.AllDirectories);
+        foreach (FileInfo fileInfo in pluginFiles)
+        {
+            _foundAssemblies.Add(Path.GetFileNameWithoutExtension(fileInfo.Name));
+        }
+    }
+
+    private async ValueTask<string> SelectFolderAsync()
+    {
+        FolderPickerResult folderPickerResult = await FolderPicker.Default.PickAsync();
+        return !folderPickerResult.IsSuccessful ? string.Empty : folderPickerResult.Folder.Path;
+    }
+
+    private void RegisterAssembly(CellContext<string> cellContext)
+    {
+        _localStorage.RegisteredAssemblies.Add(cellContext.Item);
+        LocalStorageHelper.Save(_localStorage, Constants.LocalStoragePath);
+    }
+    
+    private void RemoveAssembly(CellContext<string> cellContext)
+    {
+        _localStorage.RegisteredAssemblies.Remove(cellContext.Item);
+        LocalStorageHelper.Save(_localStorage, Constants.LocalStoragePath);
+    }
+}

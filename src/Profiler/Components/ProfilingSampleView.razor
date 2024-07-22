@@ -1,0 +1,110 @@
+﻿@using MonoProfiler.Models
+@using MonoProfiler.Models.Records
+
+@{
+    if (!Sample.HasValue)
+    {
+        return;
+    }
+
+    ProfilingSample profilingSample = Sample.Value;
+    if (profilingSample.MemoryRecords.Count > 0)
+    {
+        <MudDataGrid T="MemoryRecord" Items="@profilingSample.MemoryRecords" SortMode="SortMode.Multiple" QuickFilter="@MemoryRecordFilter" 
+                     Hover="true">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Memory Records</MudText>
+                <MudSpacer/>
+                <MudTextField @bind-Value="_memoryRecordSearch" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+                </MudTextField>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.AssemblyName" Title="Assembly name"/>
+                <PropertyColumn Property="x => x.ClassName" Title="Class name"/>
+                <PropertyColumn Property="x => x.AllocationsCount" Title="Allocations count"/>
+                <PropertyColumn Property="x => x.TotalAllocations" Title="Total allocations"/>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="MemoryRecord"/>
+            </PagerContent>
+        </MudDataGrid>
+    }
+    
+    if (profilingSample.MethodRecords.Count > 0)
+    {
+        <MudDataGrid T="MethodRecord" Items="@profilingSample.MethodRecords" SortMode="SortMode.Multiple" QuickFilter="@MethodRecordFilter" 
+                     Hover="true">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Method Records</MudText>
+                <MudSpacer/>
+                <MudTextField @bind-Value="_methodRecordSearch" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+                </MudTextField>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.MethodName" Title="Method name"/>
+                <PropertyColumn Property="x => x.Calls" Title="Calls"/>
+                <PropertyColumn Property="x => x.OwnTime" Title="Own time"/>
+                <PropertyColumn Property="x => x.OwnTimeMs" Title="Own time (ms)"/>
+                <PropertyColumn Property="x => x.TotalTime" Title="Total time"/>
+                <PropertyColumn Property="x => x.TotalTimeMs" Title="Total time (ms)"/>
+                <PropertyColumn Property="x => x.OwnAllocations" Title="Own allocations"/>
+                <PropertyColumn Property="x => x.TotalAllocations" Title="Total allocations"/>
+                <PropertyColumn Property="x => x.OwnExceptions" Title="Own exceptions"/>
+                <PropertyColumn Property="x => x.TotalExceptions" Title="Total exceptions"/>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="MethodRecord"/>
+            </PagerContent>
+        </MudDataGrid>
+    }
+    
+    if (profilingSample.AssemblyRecords.Count > 0)
+    {
+        <MudDataGrid T="AssemblyRecord" Items="@profilingSample.AssemblyRecords" SortMode="SortMode.Multiple" QuickFilter="@AssemblyRecordFilter" 
+                     Hover="true">
+            <ToolBarContent >
+                <MudText Typo="Typo.h6">Assembly Records</MudText>
+                <MudSpacer/>
+                <MudTextField @bind-Value="_assemblyRecordSearch" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+                </MudTextField>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.AssemblyName" Title="Assembly name"/>
+                <PropertyColumn Property="x => x.TotalCalls" Title="Total calls"/>
+                <PropertyColumn Property="x => x.TotalTime" Title="Total time"/>
+                <PropertyColumn Property="x => x.TotalTimeMs" Title="Total time (ms)"/>
+                <PropertyColumn Property="x => x.TotalAllocations" Title="Total Allocations"/>
+                <PropertyColumn Property="x => x.TotalExceptions" Title="Total exceptions"/>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="AssemblyRecord"/>
+            </PagerContent>
+        </MudDataGrid>
+    }
+}
+
+@code
+{
+    [Parameter]
+    public ProfilingSample? Sample { get; set; }
+    
+    private string? _memoryRecordSearch;
+    private string? _methodRecordSearch;
+    private string? _assemblyRecordSearch;
+
+    private Func<MemoryRecord, bool> MemoryRecordFilter => x =>
+        string.IsNullOrWhiteSpace(_memoryRecordSearch) || SearchByValue(_memoryRecordSearch, x.AssemblyName)
+                                                       || SearchByValue(_memoryRecordSearch, x.ClassName);
+
+    private Func<MethodRecord, bool> MethodRecordFilter => x =>
+        string.IsNullOrWhiteSpace(_methodRecordSearch) || SearchByValue(_methodRecordSearch, x.MethodName);
+    
+    private Func<AssemblyRecord, bool> AssemblyRecordFilter => x => 
+        string.IsNullOrWhiteSpace(_assemblyRecordSearch) || SearchByValue(_assemblyRecordSearch, x.AssemblyName);
+    
+    
+    private bool SearchByValue(string value, string target) => target.Contains(value, StringComparison.OrdinalIgnoreCase);
+}

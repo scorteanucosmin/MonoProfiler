@@ -1,0 +1,82 @@
+﻿@page "/"
+@using MonoProfiler.Enums
+@using MonoProfiler.Models
+@using MonoProfiler.Models.Communication
+@using Profiler.Common
+@using Profiler.Interfaces
+@using Profiler.Models
+
+@implements IDisposable;
+
+@inject IWebSocketClientHandler WebSocketClientHandler
+@inject ILocalStorageHelper LocalStorageHelper
+
+<div class="d-flex justify-center my-2">
+    <MudButton OnClick="Profile" Variant="Variant.Filled" StartIcon="@(_isProfiling ? null : Icons.Material.Outlined.Timer)"
+               IconSize="Size.Large" Color="Color.Info" Size="Size.Large">
+        @if (_isProfiling)
+        {
+            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+            <MudText Class="ms-2">PROFILING</MudText>
+        }
+        else
+        {
+            <MudText>PROFILE</MudText>
+        }
+    </MudButton>
+    <div class="ml-2">
+        <MudToggleIconButton @bind-Toggled="@_storeSamples" Icon="@Icons.Material.Outlined.DoNotDisturb"
+                             Color="@Color.Error"
+                             title=@(_storeSamples ? "Saving samples ON" : "Saving samples OFF")
+                             ToggledIcon="@Icons.Material.Filled.Save" ToggledColor="@Color.Success"/>
+    </div>
+</div>
+@{
+    if (!_profilingSample.HasValue)
+    {
+        return;
+    }
+    
+    <ProfilingSampleView Sample="@_profilingSample.Value"/>
+}
+
+@code
+{
+    private LocalStorageModel? _localStorage;
+    private ProfilingSample? _profilingSample;
+    private bool _isProfiling;
+    private bool _storeSamples;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _localStorage = LocalStorageHelper.Load<LocalStorageModel>(Constants.LocalStoragePath);
+        WebSocketClientHandler.OnProfilingSampleReceived += ProcessProfilingSample;
+        await WebSocketClientHandler.ConnectAsync();
+    }
+    
+    private void ProcessProfilingSample(ProfilingSample profilingSample)
+    {
+        _profilingSample = profilingSample;
+        
+        StateHasChanged();
+        
+        if (!_storeSamples)
+        {
+            return;
+        }
+        
+        _localStorage.Samples.Add(profilingSample);
+        LocalStorageHelper.Save(_localStorage, Constants.LocalStoragePath);
+    }
+    
+    private void Profile()
+    {
+        _isProfiling = !_isProfiling;
+        WebSocketClientHandler.SendAsync(new RemoteMessage(ProfilerActionType.Toggle, _localStorage.RegisteredAssemblies));
+    }
+    
+    public void Dispose()
+    {
+        WebSocketClientHandler.OnProfilingSampleReceived -= ProcessProfilingSample;
+    }
+}
